@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Cpu, Zap, Download, Wifi, Usb, CheckCircle, AlertCircle, Settings, Play, ChevronRight, Search, Plus, Trash2, FileText, Code } from 'lucide-react';
 
-const IvoryOSMarketplace = () => {
+const IvoryOSHub = () => {
   const [selectedHardware, setSelectedHardware] = useState([]);
   const [selectedOptimizers, setSelectedOptimizers] = useState([]);
   const [connections, setConnections] = useState({});
@@ -1018,4 +1018,4 @@ if __name__ == "__main__":
   );
 };
 
-export default IvoryOSMarketplace;
+export default IvoryOSHub;

@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/ivoryOS-hub/static/css/main.1992489c.css",
+    "main.js": "/ivoryOS-hub/static/js/main.0223bcf9.js",
+    "index.html": "/ivoryOS-hub/index.html",
+    "main.1992489c.css.map": "/ivoryOS-hub/static/css/main.1992489c.css.map",
+    "main.0223bcf9.js.map": "/ivoryOS-hub/static/js/main.0223bcf9.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1992489c.css",
+    "static/js/main.0223bcf9.js"
+  ]
+}
