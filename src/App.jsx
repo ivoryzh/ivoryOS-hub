@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Cpu, Zap, Download, Wifi, Usb, CheckCircle, AlertCircle, Settings, Play, ChevronRight, Search, Plus, Trash2, FileText, Code } from 'lucide-react';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver'; // optional, makes download easier
 
 const IvoryOSHub = () => {
   const [selectedHardware, setSelectedHardware] = useState([]);
@@ -31,9 +33,9 @@ const IvoryOSHub = () => {
       name: 'IKA Vacuum Pump',
       category: 'Vacuum Systems',
       vendor: 'IKA',
-      connection: ['usb', 'network'],
+      connection: ['usb'],
       icon: '🔄',
-      specs: 'RV 10, RS232/Ethernet control',
+      specs: 'RS232',
       difficulty: 'beginner',
       package: 'ika',
       path: 'ika.vacuum_pump',
@@ -68,7 +70,7 @@ const IvoryOSHub = () => {
       name: 'SIELC Autosampler',
       category: 'Sampling',
       vendor: 'SIELC',
-      connection: ['usb', 'network'],
+      connection: ['usb'],
       icon: '🧪',
       specs: 'AS-1 Series, serial interface',
       difficulty: 'intermediate',
@@ -81,7 +83,7 @@ const IvoryOSHub = () => {
       name: 'VICI Switching Valve',
       category: 'Fluid Routing',
       vendor: 'VICI Valco',
-      connection: ['usb', 'network'],
+      connection: ['usb'],
       icon: '🔀',
       specs: 'Multiposition valves, TTL/serial',
       difficulty: 'intermediate',
@@ -94,7 +96,7 @@ const IvoryOSHub = () => {
       name: 'Vapourtec SF-10',
       category: 'Flow Chemistry',
       vendor: 'Vapourtec',
-      connection: ['usb', 'network'],
+      connection: ['usb'],
       icon: '⚗️',
       specs: 'Lab scale flow reactor',
       difficulty: 'advanced',
@@ -109,7 +111,7 @@ const IvoryOSHub = () => {
       vendor: 'Tecan',
       connection: ['usb'],
       icon: '💧',
-      specs: 'Cavro XLP6000, RS232',
+      specs: 'Cavro XLP6000, RS232, FTDI serial',
       difficulty: 'intermediate',
       package: 'north-devices',
       path: 'north_devices.pumps.tecan_cavro',
@@ -234,34 +236,57 @@ const IvoryOSHub = () => {
       }
     }).join('\n');
 
-    const bashScript = `#!/bin/bash
-# IvoryOS Auto-Generated Launch Script
+    const bashScript = `
+# IvoryOS Universal Setup Script
 # Generated: ${new Date().toISOString()}
 
-echo "Setting up IvoryOS environment..."
+Write-Host "=== Setting up IvoryOS environment ==="
 
-# Install uv if not present
-if ! command -v uv &> /dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-fi
+# --- Check if uv is installed ---
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Write-Host "uv not found, installing uv..."
+    try {
+        iwr https://astral.sh/uv/install.ps1 -UseBasicParsing | iex
+    } catch {
+        Write-Error "Failed to install uv. Make sure you have internet and PowerShell execution policy allows scripts."
+        exit 1
+    }
+} else {
+    Write-Host "uv is already installed."
+}
 
-# Create virtual environment
+# --- Create virtual environment ---
+if (Test-Path "ivoryos-env") {
+    Write-Host "Virtual environment exists. Recreating..."
+    Remove-Item -Recurse -Force "ivoryos-env"
+}
+
+Write-Host "Creating virtual environment..."
 uv venv ivoryos-env
-source ivoryos-env/bin/activate
 
-# Install core IvoryOS
+# --- Activate environment ---
+Write-Host "Activating virtual environment..."
+& .\\ivoryos-env\\Scripts\\Activate.ps1
+
+Write-Host "Installing IvoryOS..."
 uv pip install ivoryos
 
-# Install hardware drivers
+# --- Install hardware drivers ---
 ${uniquePackages.map(pkg => `uv pip install ${pkg}`).join('\n')}
 
-# Install optimizers
+# --- Install optimizers ---
 ${optimizerPackages.map(pkg => `uv pip install ${pkg}`).join('\n')}
 
-echo "Installation complete! Starting IvoryOS..."
+# --- Open the browser (optional) ---
+Write-Host "Starting IvoryOS..."
+Start-Process "http://localhost:8000"
 
-# Run the main script
+# --- Run the main script ---
 python main.py
+`;
+    const batScript = `@echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0\ivoryos-setup.ps1"
+pause
 `;
 
     const mainScript = `#!/usr/bin/env python3
@@ -281,34 +306,32 @@ if __name__ == "__main__":
     ivoryos.run(__name__)
 `;
 
-    return { bash: bashScript, python: mainScript };
+    return { bash: bashScript, python: mainScript, bat: batScript };
   };
 
   const handleDownload = () => {
     if (downloadType === 'bash') {
-      const { bash, python } = generateBashScript();
-      
-      // Download bash script
-      const bashBlob = new Blob([bash], { type: 'text/plain' });
-      const bashUrl = URL.createObjectURL(bashBlob);
-      const bashLink = document.createElement('a');
-      bashLink.href = bashUrl;
-      bashLink.download = 'ivoryos-setup.sh';
-      bashLink.click();
-      URL.revokeObjectURL(bashUrl);
-      
-      // Download Python script
-      setTimeout(() => {
-        const pyBlob = new Blob([python], { type: 'text/plain' });
-        const pyUrl = URL.createObjectURL(pyBlob);
-        const pyLink = document.createElement('a');
-        pyLink.href = pyUrl;
-        pyLink.download = 'main.py';
-        pyLink.click();
-        URL.revokeObjectURL(pyUrl);
-      }, 100);
+      const { bash, python, bat } = generateBashScript(); // your function returning script content
+    
+      // Create a new ZIP
+      const zip = new JSZip();
+    
+      // Add files to the ZIP
+      zip.file('ivoryos-setup.ps1', bash);
+      zip.file('main.py', python);
+      zip.file('run.bat', bat)
+    
+      // Generate the ZIP as a blob and trigger download
+      zip.generateAsync({ type: 'blob' })
+        .then((content) => {
+          saveAs(content, 'ivoryos-scripts.zip');
+        })
+        .catch((err) => {
+          console.error('Failed to generate ZIP:', err);
+        });
     }
   };
+
 
   const handleCopyMain = () => {
     const { python } = generateBashScript();
