@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Cpu, Zap, Download, Wifi, Usb, CheckCircle, AlertCircle, Settings, Play, ChevronRight, Search, Plus, Trash2, FileText, Code } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver'; // optional, makes download easier
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+
 
 const IvoryOSHub = () => {
   const [selectedHardware, setSelectedHardware] = useState([]);
@@ -214,13 +217,12 @@ const IvoryOSHub = () => {
   };
 
   const generateBashScript = () => {
-    const uniquePackages = [...new Set(selectedHardware.map(hw => hw.package))];
+    const uniqueHardware = Array.from(new Map(selectedHardware.map(hw => [hw.module, hw])).values());
     const optimizerPackages = selectedOptimizers.map(id => 
       optimizerOptions.find(o => o.id === id)?.package
     ).filter(Boolean);
 
-    const hardwareImports = selectedHardware.map(hw => {
-      const className = hw.name.replace(/\s+/g, '');
+    const hardwareImports = uniqueHardware.map(hw => {
       return `from ${hw.path} import ${hw.module}`;
     }).join('\n');
 
@@ -230,9 +232,9 @@ const IvoryOSHub = () => {
       const conn = connections[hw.instanceId];
       
       if (conn?.type === 'usb') {
-        return `${varName} = ${hw.module}("${conn.port}")`;
+        return `    ${varName} = ${hw.module}("${conn.port}")`;
       } else {
-        return `${varName} = ${className}(ip="${conn.ip}", port=${conn.networkPort})`;
+        return `    ${varName} = ${hw.module}(ip="${conn.ip}", port=${conn.networkPort})`;
       }
     }).join('\n');
 
@@ -272,7 +274,7 @@ Write-Host "Installing IvoryOS..."
 uv pip install ivoryos
 
 # --- Install hardware drivers ---
-${uniquePackages.map(pkg => `uv pip install ${pkg}`).join('\n')}
+${uniqueHardware.map(pkg => `uv pip install ${pkg.package}`).join('\n')}
 
 # --- Install optimizers ---
 ${optimizerPackages.map(pkg => `uv pip install ${pkg}`).join('\n')}
@@ -299,8 +301,11 @@ ${hardwareImports}
 import ivoryos
 
 # Initialize hardware
+try:
 ${hardwareInstances}
-
+except Exception as e:
+    print(f"Failed to initialize hardware: {e}. Connect them in the web interface or try again.")
+    
 # Start IvoryOS web interface
 if __name__ == "__main__":
     ivoryos.run(__name__)
@@ -677,8 +682,8 @@ if __name__ == "__main__":
               <div className="flex gap-2">
                 <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Auto-Detection Available</p>
-                  <p>The launcher will scan for connected devices on first run and can pre-fill these values automatically.</p>
+                  <p className="font-medium mb-1"> Can't find the port now?</p>
+                  <p> Not a problem! You can connect devices later in the app.</p>
                 </div>
               </div>
             </div>
@@ -776,6 +781,7 @@ if __name__ == "__main__":
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="font-bold text-sm text-gray-900 mb-2">Generated Files:</h4>
                       <ul className="text-sm text-gray-700 space-y-1 mb-3">
+
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                           <span><code className="bg-gray-200 px-1 rounded">ivoryos-setup.sh</code> - Installs uv, creates venv, installs packages</span>
@@ -783,6 +789,10 @@ if __name__ == "__main__":
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                           <span><code className="bg-gray-200 px-1 rounded">main.py</code> - Hardware initialization and IvoryOS launcher</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span><code className="bg-gray-200 px-1 rounded">run.bat</code> - Run ivoryos-setup.sh</span>
                         </li>
                       </ul>
                     </div>
@@ -834,8 +844,10 @@ if __name__ == "__main__":
                         </div>
                       </div>
                       {showMainPreview && (
-                        <div className="p-4 bg-gray-900 rounded text-xs font-mono text-green-400 overflow-x-auto max-h-96 overflow-y-auto">
-                          <pre className="whitespace-pre">{generateBashScript().python}</pre>
+                        <div className="rounded text-xs max-h-96 overflow-y-auto">
+                          <SyntaxHighlighter language="python" style={oneDark}>
+                            {generateBashScript().python}
+                          </SyntaxHighlighter>
                         </div>
                       )}
                     </div>
