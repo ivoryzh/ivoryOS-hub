@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/ivoryOS-hub/static/css/main.ef264e29.css",
-    "main.js": "/ivoryOS-hub/static/js/main.704930e6.js",
+    "main.js": "/ivoryOS-hub/static/js/main.3a9befc1.js",
     "index.html": "/ivoryOS-hub/index.html",
     "main.ef264e29.css.map": "/ivoryOS-hub/static/css/main.ef264e29.css.map",
-    "main.704930e6.js.map": "/ivoryOS-hub/static/js/main.704930e6.js.map"
+    "main.3a9befc1.js.map": "/ivoryOS-hub/static/js/main.3a9befc1.js.map"
   },
   "entrypoints": [
     "static/css/main.ef264e29.css",
-    "static/js/main.704930e6.js"
+    "static/js/main.3a9befc1.js"
   ]
 }
